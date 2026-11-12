@@ -4,7 +4,10 @@ Domen:MrFeastProject.studio.com
 Safe:No
 Original:No
 
-Tags:FeastClicker/Clicker/SyntexHyperSoft/MrFeastProject
+Tags:FeastClicker/Clicker/SyntexHyperSoft/MrFeastProject/Game
+Link-[https://syntexhypersoft.github.io/MrFeastInfo/FeastClicker.html]
+Domen:FeastClicker_SyntexHyperSoft.OFFICIAL
+
 
 Tags:SyntexHyperSoftBank/SyntexHyperSoft/Bank/OnlineBank/Банк/ОнлайнБанк/МрФистБанк/МрФист
 Link-[https://syntexhypersoft.github.io/MrFeastProjectBank-Web/]
