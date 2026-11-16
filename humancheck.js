@@ -18,6 +18,7 @@
   const LOGO_URL = 'https://raw.githubusercontent.com/SyntexHyperSoft/SyntexHyperSoft-Database/refs/heads/main/SyntexHyperSoftLogo.png';
   const SLOW_AFTER_MS = 5000;
   const LOGO_TIMEOUT_MS = 6000;
+  const MIN_PHASE_MS = 300; // минимум анимации, чтобы не мелькало
   const SLOW_TEXT = 'Проверка идет дольше чем обычно? Проверьте интернет соединение и наличие стабильной работы VPN/Proxy/DNS сервера если используете и повторите попытку снова!';
 
   const CSS = `
@@ -106,7 +107,6 @@
     document.body.appendChild(holder.firstElementChild);
   }
 
-  const rnd = (a, b) => a + Math.random() * (b - a);
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   function run(done) {
@@ -145,7 +145,7 @@
 
       setTimeout(() => { if (g === gen) setSlow(true); }, SLOW_AFTER_MS);
 
-      Promise.all([wait(rnd(1000, 2500)), logoReady()]).then(([, ok]) => {
+      Promise.all([wait(MIN_PHASE_MS), logoReady()]).then(([, ok]) => {
         if (g !== gen) return;
         next(ok);
       });
@@ -196,6 +196,10 @@
     root.hidden = false;
     busy('Проверяем браузер...', ok => ask(ok));
   }
+
+  // Предзагрузка иконки сразу, чтобы к моменту показа она уже была в кэше браузера.
+  const preload = new Image();
+  preload.src = LOGO_URL;
 
   global.HumanCheck = { run };
 })(window);
