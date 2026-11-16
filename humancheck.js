@@ -15,9 +15,8 @@
 (function (global) {
   'use strict';
 
-  const LOGO_URL = 'https://raw.githubusercontent.com/SyntexHyperSoft/SyntexHyperSoft-Database/refs/heads/main/SyntexHyperSoftLogo.png';
+  const LOGO_URL = 'https://syntexhypersoft.github.io/SyntexHyperSoft-Database/SyntexHyperSoftLogo.png';
   const SLOW_AFTER_MS = 5000;
-  const LOGO_TIMEOUT_MS = 6000;
   const MIN_PHASE_MS = 300; // минимум анимации, чтобы не мелькало
   const SLOW_TEXT = 'Проверка идет дольше чем обычно? Проверьте интернет соединение и наличие стабильной работы VPN/Proxy/DNS сервера если используете и повторите попытку снова!';
 
@@ -53,7 +52,8 @@
 .hc-retry:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
 
 .hc-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 14px; color: #a0a0a0; }
-.hc-foot img { width: 28px; height: 28px; object-fit: contain; }
+.hc-foot img { width: 28px; height: 28px; object-fit: contain; opacity: 0; transition: opacity 0.2s ease; }
+.hc-foot img.ready { opacity: 1; }
 
 .hc-bottom { position: absolute; left: 0; right: 0; bottom: 16px; text-align: center; font-size: 13px; color: #7a7a7a; letter-spacing: 0.02em; padding: 0 16px; }
 
@@ -120,18 +120,23 @@
     const retry = $('hcRetry');
     const logo = root.querySelector('.hc-foot img');
 
-    // Проверка идёт, пока иконка (логотип в футере) не загрузится.
+    // Проверка идёт, пока иконка (логотип в футере) не загрузится полностью.
+    // Если сеть/домен недоступны, иконка продолжает пробовать загрузиться,
+    // а через SLOW_AFTER_MS появляется подсказка про соединение.
     function logoReady() {
       return new Promise(resolve => {
-        if (logo.complete && logo.naturalWidth > 0) return resolve(true);
-        const t = setTimeout(() => resolve(false), LOGO_TIMEOUT_MS);
-        logo.addEventListener('load', () => { clearTimeout(t); resolve(true); }, { once: true });
-        logo.addEventListener('error', () => { clearTimeout(t); resolve(false); }, { once: true });
+        const finish = () => {
+          const reveal = () => { logo.classList.add('ready'); resolve(); };
+          if (typeof logo.decode === 'function') logo.decode().then(reveal, reveal);
+          else reveal();
+        };
+        if (logo.complete && logo.naturalWidth > 0) return finish();
+        logo.addEventListener('load', finish, { once: true });
+        logo.onerror = () => {
+          setTimeout(() => { logo.src = LOGO_URL + '?r=' + Date.now(); }, 2000);
+        };
       });
     }
-
-    let gen = 0; // номер текущей фазы: устаревшие таймеры и запросы игнорируются
-    const setSlow = on => { slow.hidden = !on; };
 
     function busy(text, next) {
       const g = ++gen;
@@ -145,15 +150,15 @@
 
       setTimeout(() => { if (g === gen) setSlow(true); }, SLOW_AFTER_MS);
 
-      Promise.all([wait(MIN_PHASE_MS), logoReady()]).then(([, ok]) => {
+      Promise.all([wait(MIN_PHASE_MS), logoReady()]).then(() => {
         if (g !== gen) return;
-        next(ok);
+        next();
       });
     }
 
-    function ask(ok) {
+    function ask() {
       const g = ++gen;
-      setSlow(ok === false);
+      setSlow(false);
       ring.hidden = true;
       cb.hidden = false;
       cb.disabled = false;
@@ -190,11 +195,14 @@
       }, 700);
     }
 
-    retry.onclick = () => busy('Проверяем браузер...', ok => ask(ok));
+    retry.onclick = () => {
+      logo.src = LOGO_URL + '?r=' + Date.now();
+      busy('Проверяем браузер...', ask);
+    };
 
     root.classList.remove('hc-out');
     root.hidden = false;
-    busy('Проверяем браузер...', ok => ask(ok));
+    busy('Проверяем браузер...', ask);
   }
 
   // Предзагрузка иконки сразу, чтобы к моменту показа она уже была в кэше браузера.
