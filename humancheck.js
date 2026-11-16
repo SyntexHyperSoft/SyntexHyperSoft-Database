@@ -11,14 +11,13 @@
  *   LOGO_URL     — логотип в футере и адрес, по которому проверяется соединение
  *   SLOW_AFTER_MS — через сколько мс показывать подсказку про VPN/DNS
  *   SLOW_TEXT    — текст подсказки
- * SyntexHyperSoft
  */
 (function (global) {
   'use strict';
 
   const LOGO_URL = 'https://raw.githubusercontent.com/SyntexHyperSoft/SyntexHyperSoft-Database/refs/heads/main/SyntexHyperSoftLogo.png';
   const SLOW_AFTER_MS = 5000;
-  const PROBE_TIMEOUT_MS = 15000;
+  const LOGO_TIMEOUT_MS = 6000;
   const SLOW_TEXT = 'Проверка идет дольше чем обычно? Проверьте интернет соединение и наличие стабильной работы VPN/Proxy/DNS сервера если используете и повторите попытку снова!';
 
   const CSS = `
@@ -110,15 +109,6 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Реальная проверка соединения: запрос к логотипу на GitHub.
-  function probe() {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
-    return fetch(LOGO_URL + '?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
-      .then(() => true, () => false)
-      .finally(() => clearTimeout(timer));
-  }
-
   function run(done) {
     mount();
     const $ = id => document.getElementById(id);
@@ -128,6 +118,17 @@
     const label = $('hcLabel');
     const slow = $('hcSlow');
     const retry = $('hcRetry');
+    const logo = root.querySelector('.hc-foot img');
+
+    // Проверка идёт, пока иконка (логотип в футере) не загрузится.
+    function logoReady() {
+      return new Promise(resolve => {
+        if (logo.complete && logo.naturalWidth > 0) return resolve(true);
+        const t = setTimeout(() => resolve(false), LOGO_TIMEOUT_MS);
+        logo.addEventListener('load', () => { clearTimeout(t); resolve(true); }, { once: true });
+        logo.addEventListener('error', () => { clearTimeout(t); resolve(false); }, { once: true });
+      });
+    }
 
     let gen = 0; // номер текущей фазы: устаревшие таймеры и запросы игнорируются
     const setSlow = on => { slow.hidden = !on; };
@@ -144,16 +145,15 @@
 
       setTimeout(() => { if (g === gen) setSlow(true); }, SLOW_AFTER_MS);
 
-      Promise.all([wait(rnd(1000, 2500)), probe()]).then(([, ok]) => {
+      Promise.all([wait(rnd(1000, 2500)), logoReady()]).then(([, ok]) => {
         if (g !== gen) return;
-        if (!ok) setSlow(true);
-        next();
+        next(ok);
       });
     }
 
-    function ask() {
+    function ask(ok) {
       const g = ++gen;
-      setSlow(false);
+      setSlow(ok === false);
       ring.hidden = true;
       cb.hidden = false;
       cb.disabled = false;
@@ -190,11 +190,11 @@
       }, 700);
     }
 
-    retry.onclick = () => busy('Проверяем браузер...', ask);
+    retry.onclick = () => busy('Проверяем браузер...', ok => ask(ok));
 
     root.classList.remove('hc-out');
     root.hidden = false;
-    busy('Проверяем браузер...', ask);
+    busy('Проверяем браузер...', ok => ask(ok));
   }
 
   global.HumanCheck = { run };
