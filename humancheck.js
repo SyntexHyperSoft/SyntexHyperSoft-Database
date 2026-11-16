@@ -138,6 +138,9 @@
       });
     }
 
+    let gen = 0; // номер текущей фазы: устаревшие таймеры и запросы игнорируются
+    const setSlow = on => { slow.hidden = !on; };
+
     function busy(text, next) {
       const g = ++gen;
       ring.hidden = false;
