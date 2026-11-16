@@ -11,6 +11,7 @@
  *   LOGO_URL     — логотип в футере и адрес, по которому проверяется соединение
  *   SLOW_AFTER_MS — через сколько мс показывать подсказку про VPN/DNS
  *   SLOW_TEXT    — текст подсказки
+ * SyntexHyperSoft
  */
 (function (global) {
   'use strict';
